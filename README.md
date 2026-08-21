@@ -17,7 +17,8 @@ Do not drive the LED from D3 alone. Aim the dome at the TV IR window.
 
 ## RGB status (one 220 Ω)
 
-**D12 = R, D13 = G, A0 = B.** Idle green, red while sending.
+**D12 = R, D13 = G, A0 = B.**  
+Tap → **green** 2.5 s. Hold → **blue** 2.5 s. After each IR burst → **red** 0.5 s (green/blue off while red is on, then the tap/hold color returns).
 
 Common cathode (default):
 

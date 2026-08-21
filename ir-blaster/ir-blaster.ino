@@ -18,6 +18,12 @@ const uint8_t RGB_B = A0;
 const uint16_t CARRIER_HALF_US = 13;
 const uint8_t SEND_REPEATS = 3;
 const uint16_t HOLD_MS = 500;
+const uint16_t RGB_RED_MS = 500;     // red while/after IR, kills green/blue
+const uint16_t RGB_STATUS_MS = 2500; // tap = green, hold = blue
+
+static unsigned long rgb_red_until = 0;
+static unsigned long rgb_status_until = 0;
+static uint8_t rgb_status = 0; // 0 off, 1 tap green, 2 hold blue
 
 const uint8_t ROW_PIN[4] = {4, 5, 6, 7};
 const uint8_t COL_PIN[4] = {8, 9, 10, 11};
@@ -137,14 +143,46 @@ static void rgb_set(bool r, bool g, bool b) {
   rgb_drive(RGB_B, b);
 }
 
+static void rgb_note_tap(void) {
+  rgb_status = 1;
+  rgb_status_until = millis() + RGB_STATUS_MS;
+}
+
+static void rgb_note_hold(void) {
+  rgb_status = 2;
+  rgb_status_until = millis() + RGB_STATUS_MS;
+}
+
+static void rgb_note_tx(void) {
+  rgb_red_until = millis() + RGB_RED_MS;
+}
+
+static void rgb_poll(void) {
+  unsigned long now = millis();
+  if ((long)(rgb_red_until - now) > 0) {
+    rgb_set(true, false, false);
+    return;
+  }
+  if ((long)(rgb_status_until - now) > 0) {
+    if (rgb_status == 1)
+      rgb_set(false, true, false);
+    else if (rgb_status == 2)
+      rgb_set(false, false, true);
+    else
+      rgb_set(false, false, false);
+    return;
+  }
+  rgb_set(false, false, false);
+}
+
 static void send_named(const char *name, uint32_t code) {
-  rgb_set(true, false, false);
   for (uint8_t n = 0; n < SEND_REPEATS; n++) {
     send_samsung(code);
     if (n + 1 < SEND_REPEATS)
       delay(40);
   }
-  rgb_set(false, true, false);
+  rgb_note_tx();
+  rgb_set(true, false, false);
   Serial.print(F("OK "));
   Serial.println(name);
 }
@@ -209,9 +247,11 @@ static void handle_line(char *line) {
       Serial.println(F("ERR bad hex"));
       return;
     }
+    rgb_note_tap();
     send_named("SEND", code);
     return;
   }
+  rgb_note_tap();
   fire_preset(line);
 }
 
@@ -230,6 +270,10 @@ static char scan_keypad() {
 }
 
 static void keypad_event(char key, bool held) {
+  if (held)
+    rgb_note_hold();
+  else
+    rgb_note_tap();
   if (key >= '0' && key <= '9') {
     if (held) {
       switch (key) {
@@ -319,6 +363,9 @@ void setup() {
   pinMode(RGB_G, OUTPUT);
   pinMode(RGB_B, OUTPUT);
   rgb_set(false, false, false);
+  rgb_status = 0;
+  rgb_red_until = 0;
+  rgb_status_until = 0;
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(ROW_PIN[i], OUTPUT);
     digitalWrite(ROW_PIN[i], HIGH);
@@ -328,7 +375,6 @@ void setup() {
   while (!Serial) {
     ;
   }
-  rgb_set(false, true, false);
   Serial.println(F("READY"));
 }
 
@@ -349,4 +395,5 @@ void loop() {
     }
   }
   poll_keypad();
+  rgb_poll();
 }
