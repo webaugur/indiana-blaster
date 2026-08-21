@@ -1,0 +1,6 @@
+build/
+*.elf
+*.hex
+.arduino15/
+.DS_Store
+*~
