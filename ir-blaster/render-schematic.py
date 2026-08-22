@@ -67,18 +67,15 @@ def main():
     p5v = pin(ax, 1.05, 8.05, "5V", "#c0392b")
     pd3 = pin(ax, 1.05, 7.15, "D3", "#f39c12")
     pgnd = pin(ax, 1.05, 6.25, "GND", "#2c3e50")
+    pd2 = pin(ax, 1.05, 5.40, "D2", "#8e44ad")
     pr = pin(ax, 1.05, 4.55, "D12", "#c0392b")
     pg = pin(ax, 1.05, 3.65, "D13", "#1e8449")
-    pb = pin(ax, 1.05, 2.75, "A0", "#2471a3")
-    node(ax, p5v[0], p5v[1])
-    node(ax, pd3[0], pd3[1])
-    node(ax, pgnd[0], pgnd[1])
-    node(ax, pr[0], pr[1])
-    node(ax, pg[0], pg[1])
-    node(ax, pb[0], pb[1])
-    label(ax, 2.02, 5.55, "IR driver", ha="center", color="#eafaf1", fontsize=9)
-    label(ax, 2.02, 1.85, "RGB status", ha="center", color="#eafaf1", fontsize=9)
-    label(ax, 2.02, 1.25, "D2 A1 A2 encoder  D4–D11 keypad", ha="center", color="#ffd7a8", fontsize=8)
+    pb = pin(ax, 1.05, 2.85, "A0", "#2471a3")
+    pa1 = pin(ax, 1.05, 2.05, "A1", "#8e44ad")
+    pa2 = pin(ax, 1.05, 1.25, "A2", "#8e44ad")
+    for p in (p5v, pd3, pgnd, pd2, pr, pg, pb, pa1, pa2):
+        node(ax, p[0], p[1])
+    label(ax, 2.02, 4.95, "enc CLK", ha="center", color="#e8d5f5", fontsize=8)
 
     # --- IR: 100Ω, LED, NPN ---
     zigzag(ax, 4.4, 8.05)
@@ -146,12 +143,26 @@ def main():
     label(ax, 7.3, 3.78, "220 Ω", ha="center", fontsize=11, fontweight="bold")
     wire(ax, [(7.9, 3.35), (8.55, 3.35), (8.55, 6.25)])
     node(ax, 8.55, 6.25)
-    label(ax, 6.4, 2.35, "common cathode  →  GND", ha="center", fontsize=9, color="#444")
-    label(ax, 6.4, 2.05, "common anode: 5V—220Ω—common; set RGB_COMMON_ANODE 1", ha="center", fontsize=8, color="#666")
+    label(ax, 6.4, 2.48, "common cathode → GND", ha="center", fontsize=8, color="#444")
+
+    # --- 5-pin rotary encoder ---
+    ax.add_patch(FancyBboxPatch((3.85, 0.15), 6.7, 2.2, boxstyle="round,pad=0.04", fc="#fff", ec="#8e44ad", lw=1.6))
+    label(ax, 7.2, 2.1, "5-pin encoder", ha="center", fontsize=11, fontweight="bold")
+    enc_pins = [("C", "GND"), ("A CLK", "D2"), ("B DT", "A1"), ("SW1", "GND"), ("SW2", "A2")]
+    for i, (top, bot) in enumerate(enc_pins):
+        x = 4.2 + i * 1.22
+        ax.add_patch(FancyBboxPatch((x, 1.15), 1.08, 0.72, boxstyle="round,pad=0.02", fc="#8e44ad", ec="none"))
+        label(ax, x + 0.54, 1.62, top, ha="center", va="center", color="white", fontsize=7.5, fontweight="bold")
+        label(ax, x + 0.54, 0.92, bot, ha="center", fontsize=8, color="#333")
+    label(ax, 7.2, 0.38, "1 turn = 10% vol   click = mute   swap A/B if reversed", ha="center", fontsize=8, color="#444")
+    wire(ax, [(pd2[0], pd2[1]), (3.55, 5.40), (3.55, 1.51), (4.2, 1.51)])
+    wire(ax, [(pa1[0], pa1[1]), (5.42, 2.05), (5.42, 1.51)])
+    wire(ax, [(pa2[0], pa2[1]), (7.86, 1.25), (7.86, 1.51)])
+    wire(ax, [(pgnd[0], 6.25), (9.05, 6.25), (9.05, 0.55), (4.74, 0.55), (4.74, 0.92)])
 
     # Title
     label(ax, 8.6, 10.05, "indiana-blaster", ha="center", fontsize=18, fontweight="bold")
-    label(ax, 8.6, 9.65, "Uno  ·  115200  ·  keypad + RGB + indiana-ir-send", ha="center", fontsize=11, color="#333")
+    label(ax, 8.6, 9.65, "Uno  ·  115200  ·  keypad + RGB + encoder + indiana-ir-send", ha="center", fontsize=11, color="#333")
 
     # Keypad
     ax.add_patch(FancyBboxPatch((10.85, 2.55), 5.9, 6.5, boxstyle="round,pad=0.05", fc="#fff", ec="#333", lw=1.4))
@@ -175,11 +186,11 @@ def main():
     label(ax, 13.8, 2.95, "hold A–D = HDMI   hold # = power off", ha="center", fontsize=9, color="#333")
 
     notes = (
-        "IR: do not drive the 940 nm LED from D3 alone. NPN 2N2222 / 2N3904.\n"
-        "RGB: one 220 Ω on the common. Encoder: C+SW1 GND, A/CLK D2, B/DT A1, SW2 A2. 1 turn = 10% vol."
+        "IR: 940 nm via NPN, not from D3. RGB: one 220 Ω on common (CC as drawn).\n"
+        "Encoder: C+SW1 to GND. A/CLK→D2  B/DT→A1  SW2→A2. 20 detents/turn, 10 VOL± = 10%."
     )
-    ax.add_patch(FancyBboxPatch((3.85, 0.2), 12.9, 1.0, boxstyle="round,pad=0.05", fc="#fff", ec="#bbb", lw=1))
-    ax.text(4.05, 1.0, notes, va="top", fontsize=10, fontfamily="DejaVu Sans", color="#222", linespacing=1.4)
+    ax.add_patch(FancyBboxPatch((10.85, 0.15), 5.9, 2.2, boxstyle="round,pad=0.05", fc="#fff", ec="#bbb", lw=1))
+    ax.text(11.05, 2.15, notes, va="top", fontsize=9, fontfamily="DejaVu Sans", color="#222", linespacing=1.45)
 
     fig.tight_layout(pad=0.25)
     fig.savefig(OUT, dpi=140, facecolor=fig.get_facecolor())

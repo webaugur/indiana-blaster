@@ -1,6 +1,6 @@
 # indiana-blaster
 
-Arduino Uno Samsung IR remote: 940 nm LED, 4×4 keypad, RGB status, USB serial.
+Arduino Uno Samsung IR remote: 940 nm LED, 4×4 keypad, RGB status, 5-pin rotary encoder, USB serial.
 
 Repo: https://github.com/webaugur/indiana-blaster
 
@@ -86,3 +86,5 @@ sudo usermod -aG dialout "$USER"   # then log out
 ```
 
 115200 8N1. Host waits for `READY`/`OK` on the port (Uno resets on open).
+
+Pin map: D3 IR · D4–D11 keypad · D12/D13/A0 RGB · D2/A1/A2 encoder · D0/D1 USB serial. Free: A3–A5.
