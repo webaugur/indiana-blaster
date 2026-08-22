@@ -31,6 +31,18 @@ common cathode ---- 220 Ω ---- GND
 
 Common anode: set `#define RGB_COMMON_ANODE 1` in `ir-blaster/ir-blaster.ino`, then `5V -- 220 Ω -- common anode` and R/G/B cathodes to the pins.
 
+## 5-pin rotary encoder
+
+```
+C  (common)  ---- GND
+A  (CLK)     ---- D2
+B  (DT)      ---- A1
+SW1          ---- GND
+SW2          ---- A2
+```
+
+One full turn = **10 VOL+ or VOL−** (10% on a 0–100 Samsung scale). Default **20 detents/turn** (`ENC_DETENTS_REV`). Click = **MUTE**. Swap A/B if CW is backwards.
+
 ## 4×4 keypad (rows D4–D7, cols D8–D11)
 
 ```
