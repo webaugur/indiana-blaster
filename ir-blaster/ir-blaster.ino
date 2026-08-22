@@ -4,12 +4,19 @@
 // IR: D3 -- 1k -- 2N2222 base; emitter GND; 5V -- 100R -- IR LED -- collector.
 // 4x4 keypad: rows D4-D7, cols D8-D11 (standard 123A / 456B / 789C / *0#D).
 // RGB: D12=R D13=G A0=B, one 220Ω on the common (see RGB_COMMON_ANODE).
+// Encoder (5-pin): C+SW1→GND, A/CLK→D2, B/DT→A1, SW2→A2. INPUT_PULLUP.
 // Serial 115200. READY after reset.
 
 const uint8_t IR_PIN = 3;
 const uint8_t RGB_R = 12;
 const uint8_t RGB_G = 13;
 const uint8_t RGB_B = A0;
+const uint8_t ENC_CLK = 2;  // A / CLK (INT0)
+const uint8_t ENC_DT = A1;  // B / DT
+const uint8_t ENC_SW = A2;  // push switch
+// Typical PEC11: 20 detents/turn. 10 VOL± IR codes ≈ 10% of 0–100 Samsung volume.
+const uint8_t ENC_DETENTS_REV = 20;
+const uint8_t ENC_VOL_STEPS_REV = 10;
 // 0 = common cathode (common -- 220Ω -- GND; R/G/B anodes to pins).
 // 1 = common anode   (5V -- 220Ω -- common; R/G/B cathodes to pins).
 #ifndef RGB_COMMON_ANODE
@@ -175,16 +182,20 @@ static void rgb_poll(void) {
   rgb_set(false, false, false);
 }
 
-static void send_named(const char *name, uint32_t code) {
-  for (uint8_t n = 0; n < SEND_REPEATS; n++) {
+static void send_named_n(const char *name, uint32_t code, uint8_t repeats) {
+  for (uint8_t n = 0; n < repeats; n++) {
     send_samsung(code);
-    if (n + 1 < SEND_REPEATS)
+    if (n + 1 < repeats)
       delay(40);
   }
   rgb_note_tx();
   rgb_set(true, false, false);
   Serial.print(F("OK "));
   Serial.println(name);
+}
+
+static void send_named(const char *name, uint32_t code) {
+  send_named_n(name, code, SEND_REPEATS);
 }
 
 static void trim_inplace(char *s) {
@@ -356,6 +367,47 @@ static void poll_keypad() {
   }
 }
 
+static void poll_encoder() {
+  static uint8_t last_clk = 1;
+  static int8_t acc = 0;
+  static unsigned long last_edge = 0;
+  static uint8_t sw_down = 0;
+  static unsigned long sw_t0 = 0;
+  unsigned long now = millis();
+  uint8_t clk = digitalRead(ENC_CLK);
+  if (last_clk == HIGH && clk == LOW && (now - last_edge) >= 2) {
+    last_edge = now;
+    int8_t dir = (digitalRead(ENC_DT) == HIGH) ? 1 : -1;
+    acc += dir;
+    int8_t thresh = (int8_t)(ENC_DETENTS_REV / ENC_VOL_STEPS_REV);
+    if (thresh < 1)
+      thresh = 1;
+    while (acc >= thresh) {
+      rgb_note_tap();
+      send_named_n("VOLUP", C_VOLUP, 1);
+      acc -= thresh;
+    }
+    while (acc <= -thresh) {
+      rgb_note_tap();
+      send_named_n("VOLDOWN", C_VOLDOWN, 1);
+      acc += thresh;
+    }
+  }
+  last_clk = clk;
+
+  uint8_t sw = digitalRead(ENC_SW) == LOW;
+  if (sw && !sw_down) {
+    sw_down = 1;
+    sw_t0 = now;
+  } else if (!sw && sw_down) {
+    sw_down = 0;
+    if ((now - sw_t0) < HOLD_MS) {
+      rgb_note_tap();
+      fire_preset("MUTE");
+    }
+  }
+}
+
 void setup() {
   pinMode(IR_PIN, OUTPUT);
   digitalWrite(IR_PIN, LOW);
@@ -366,6 +418,9 @@ void setup() {
   rgb_status = 0;
   rgb_red_until = 0;
   rgb_status_until = 0;
+  pinMode(ENC_CLK, INPUT_PULLUP);
+  pinMode(ENC_DT, INPUT_PULLUP);
+  pinMode(ENC_SW, INPUT_PULLUP);
   for (uint8_t i = 0; i < 4; i++) {
     pinMode(ROW_PIN[i], OUTPUT);
     digitalWrite(ROW_PIN[i], HIGH);
@@ -395,5 +450,6 @@ void loop() {
     }
   }
   poll_keypad();
+  poll_encoder();
   rgb_poll();
 }

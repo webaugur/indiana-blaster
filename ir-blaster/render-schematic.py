@@ -78,7 +78,7 @@ def main():
     node(ax, pb[0], pb[1])
     label(ax, 2.02, 5.55, "IR driver", ha="center", color="#eafaf1", fontsize=9)
     label(ax, 2.02, 1.85, "RGB status", ha="center", color="#eafaf1", fontsize=9)
-    label(ax, 2.02, 1.25, "keypad D4–D11", ha="center", color="#ffd7a8", fontsize=8)
+    label(ax, 2.02, 1.25, "D2 A1 A2 encoder  D4–D11 keypad", ha="center", color="#ffd7a8", fontsize=8)
 
     # --- IR: 100Ω, LED, NPN ---
     zigzag(ax, 4.4, 8.05)
@@ -176,7 +176,7 @@ def main():
 
     notes = (
         "IR: do not drive the 940 nm LED from D3 alone. NPN 2N2222 / 2N3904.\n"
-        "RGB: one 220 Ω on the common. Default common-cathode as drawn. Idle = green, send = red."
+        "RGB: one 220 Ω on the common. Encoder: C+SW1 GND, A/CLK D2, B/DT A1, SW2 A2. 1 turn = 10% vol."
     )
     ax.add_patch(FancyBboxPatch((3.85, 0.2), 12.9, 1.0, boxstyle="round,pad=0.05", fc="#fff", ec="#bbb", lw=1))
     ax.text(4.05, 1.0, notes, va="top", fontsize=10, fontfamily="DejaVu Sans", color="#222", linespacing=1.4)
